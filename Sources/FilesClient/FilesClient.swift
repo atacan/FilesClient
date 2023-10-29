@@ -1,11 +1,16 @@
 import Dependencies
 import Foundation
+import OSLog
 import XCTestDynamicOverlay
+
+private let logger = Logger(subsystem: "FilesClient", category: "file_operations")
 
 public struct FilesClient {
     public var read: @Sendable (URL) async throws -> String
     public var temporaryDirectory: @Sendable () -> URL
     public var temporaryFileWithExtension: @Sendable (String) -> URL
+    public var createDirectory: @Sendable (URL) throws -> Void
+    public var applicationSupportDirectory: @Sendable () -> URL?
 
     // function versions with named arguments of the above
     public func read(url: URL) async throws -> String {
@@ -27,7 +32,9 @@ extension FilesClient: DependencyKey {
                 URL(fileURLWithPath: NSTemporaryDirectory())
                     .appendingPathComponent(uuid().uuidString)
                     .appendingPathExtension($0)
-            }
+            },
+            createDirectory: { try createDirectoryIfNotExists(at: $0) },
+            applicationSupportDirectory: { createApplicationSupportDirectoryIfNotExists() }
         )
     }
 }
@@ -36,5 +43,51 @@ extension DependencyValues {
     public var filesClient: FilesClient {
         get { self[FilesClient.self] }
         set { self[FilesClient.self] = newValue }
+    }
+}
+
+func createDirectoryIfNotExists(at url: URL) throws {
+    let fileManager = FileManager.default
+    if fileManager.fileExists(atPath: url.path) {
+        logger.info("'\(url.path)' already exists")
+    }
+    else {
+        try fileManager.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
+        logger.info("Created '\(url.path)'")
+    }
+}
+
+func createApplicationSupportDirectoryIfNotExists() -> URL? {
+    // Get the application support directory
+    let fileManager = FileManager.default
+    guard let appSupportDir = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+        logger.error("Unable to access application support directory")
+        return nil
+    }
+
+    // Get the app name from the info dictionary
+    guard let appName = Bundle.main.infoDictionary?["CFBundleName"] as? String else {
+        logger.error("Unable to get app name from info dictionary")
+        return nil
+    }
+
+    // Define the path for the app folder
+    let appFolder = appSupportDir.appendingPathComponent(appName)
+
+    // Check if the app folder exists, if not create it
+    if fileManager.fileExists(atPath: appFolder.path) {
+        logger.info("'\(appName)' folder already exists")
+        return appFolder
+    }
+    else {
+        do {
+            try fileManager.createDirectory(at: appFolder, withIntermediateDirectories: true, attributes: nil)
+            logger.info("Created '\(appName)' folder")
+            return appFolder
+        }
+        catch {
+            logger.error("Error creating '\(appName)' folder: \(error)")
+            return nil
+        }
     }
 }

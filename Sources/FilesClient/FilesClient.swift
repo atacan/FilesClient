@@ -11,6 +11,8 @@ public struct FilesClient {
     public var temporaryFileWithExtension: @Sendable (String) -> URL
     public var createDirectory: @Sendable (URL) throws -> Void
     public var applicationSupportDirectory: @Sendable () -> URL?
+    public var download: @Sendable (URL, URL) async throws -> Void
+    public var downloadWithProgress: @Sendable (URL, URL) async throws -> AsyncThrowingStream<DownloadFileResult, Error>
 
     // function versions with named arguments of the above
     public func read(url: URL) async throws -> String {
@@ -24,6 +26,7 @@ public struct FilesClient {
 extension FilesClient: DependencyKey {
     public static var liveValue: Self {
         @Dependency(\.uuid) var uuid
+        let downloadFile = DownloadFile()
 
         return Self(
             read: { try String(contentsOf: $0) },
@@ -34,7 +37,28 @@ extension FilesClient: DependencyKey {
                     .appendingPathExtension($0)
             },
             createDirectory: { try createDirectoryIfNotExists(at: $0) },
-            applicationSupportDirectory: { createApplicationSupportDirectoryIfNotExists() }
+            applicationSupportDirectory: { createApplicationSupportDirectoryIfNotExists() },
+            download: { from, to in
+                let session = URLSession.shared
+                let task = session.downloadTask(with: from) { url, response, error in
+                    if let error = error {
+                        logger.error("Error downloading file: \(error)")
+                    }
+                    else if let url = url {
+                        do {
+                            try FileManager.default.moveItem(at: url, to: to)
+                        }
+                        catch {
+                            logger.error("Error moving downloaded file: \(error)")
+                        }
+                    }
+                }
+                task.resume()
+            },
+            downloadWithProgress: { source, destination in
+                await downloadFile.finishTask()
+                return try await downloadFile.startDownloading(url: source, to: destination)
+            }
         )
     }
 }

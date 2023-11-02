@@ -19,6 +19,7 @@ actor DownloadFile {
                 didFinishDownloadingTo: { url in
                     do {
                         try FileManager.default.moveItem(at: url, to: destination)
+                        continuation.finish()
                     }
                     catch {
                         continuation.finish(throwing: error)

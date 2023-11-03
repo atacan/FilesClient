@@ -12,7 +12,6 @@ public struct FilesClient {
     public var createDirectory: @Sendable (URL) throws -> Void
     public var applicationSupportDirectory: @Sendable () -> URL?
     public var download: @Sendable (URL, URL) async throws -> Void
-    public var downloadWithProgress: @Sendable (URL, URL) async throws -> AsyncThrowingStream<DownloadFileResult, Error>
 
     // function versions with named arguments of the above
     public func read(url: URL) async throws -> String {
@@ -54,10 +53,6 @@ extension FilesClient: DependencyKey {
                     }
                 }
                 task.resume()
-            },
-            downloadWithProgress: { source, destination in
-                await downloadFile.finishTask()
-                return try await downloadFile.startDownloading(url: source, to: destination)
             }
         )
     }

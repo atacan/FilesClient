@@ -25,7 +25,6 @@ public struct FilesClient {
 extension FilesClient: DependencyKey {
     public static var liveValue: Self {
         @Dependency(\.uuid) var uuid
-        let downloadFile = DownloadFile()
 
         return Self(
             read: { try String(contentsOf: $0) },

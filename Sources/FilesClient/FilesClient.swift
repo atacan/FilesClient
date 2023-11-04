@@ -2,16 +2,21 @@ import Dependencies
 import Foundation
 import OSLog
 import XCTestDynamicOverlay
+import Cocoa
+import ZIPFoundation
 
 private let logger = Logger(subsystem: "FilesClient", category: "file_operations")
 
 public struct FilesClient {
     public var read: @Sendable (URL) async throws -> String
+    public var openWithDefaultApp: @Sendable (URL) async -> Bool
     public var temporaryDirectory: @Sendable () -> URL
     public var temporaryFileWithExtension: @Sendable (String) -> URL
     public var createDirectory: @Sendable (URL) throws -> Void
     public var applicationSupportDirectory: @Sendable () -> URL?
     public var download: @Sendable (URL, URL) async throws -> Void
+    public var unZip: @Sendable (URL, URL) async throws -> Void
+    public var deleteFile: @Sendable (URL) async throws -> Void
 
     // function versions with named arguments of the above
     public func read(url: URL) async throws -> String {
@@ -28,6 +33,9 @@ extension FilesClient: DependencyKey {
 
         return Self(
             read: { try String(contentsOf: $0) },
+            openWithDefaultApp: { url in
+                NSWorkspace.shared.open(url)
+            },
             temporaryDirectory: { URL(fileURLWithPath: NSTemporaryDirectory()) },
             temporaryFileWithExtension: {
                 URL(fileURLWithPath: NSTemporaryDirectory())
@@ -52,6 +60,15 @@ extension FilesClient: DependencyKey {
                     }
                 }
                 task.resume()
+            },
+            unZip: { sourceURL, destinationURL in
+                let fileManager = FileManager()
+                
+                try fileManager.createDirectory(at: destinationURL, withIntermediateDirectories: true, attributes: nil)
+                try fileManager.unzipItem(at: sourceURL, to: destinationURL)
+            },
+            deleteFile: {url in
+                try FileManager.default.removeItem(at: url)
             }
         )
     }

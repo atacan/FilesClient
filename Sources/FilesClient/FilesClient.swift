@@ -3,7 +3,6 @@ import Foundation
 import OSLog
 import XCTestDynamicOverlay
 import Cocoa
-import ZIPFoundation
 
 private let logger = Logger(subsystem: "FilesClient", category: "file_operations")
 
@@ -15,7 +14,6 @@ public struct FilesClient {
     public var createDirectory: @Sendable (URL) throws -> Void
     public var applicationSupportDirectory: @Sendable () -> URL?
     public var download: @Sendable (URL, URL) async throws -> Void
-    public var unZip: @Sendable (URL, URL) async throws -> Void
     public var deleteFile: @Sendable (URL) async throws -> Void
 
     // function versions with named arguments of the above
@@ -60,12 +58,6 @@ extension FilesClient: DependencyKey {
                     }
                 }
                 task.resume()
-            },
-            unZip: { sourceURL, destinationURL in
-                let fileManager = FileManager()
-                
-                try fileManager.createDirectory(at: destinationURL, withIntermediateDirectories: true, attributes: nil)
-                try fileManager.unzipItem(at: sourceURL, to: destinationURL)
             },
             deleteFile: {url in
                 try FileManager.default.removeItem(at: url)

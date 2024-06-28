@@ -76,11 +76,11 @@ extension DependencyValues {
 func createDirectoryIfNotExists(at url: URL) throws {
     let fileManager = FileManager.default
     if fileManager.fileExists(atPath: url.path) {
-        logger.info("'\(url.path)' already exists")
+        logger.debug("'\(url.path)' already exists")
     }
     else {
         try fileManager.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
-        logger.info("Created '\(url.path)'")
+        logger.debug("Created '\(url.path)'")
     }
 }
 
@@ -103,13 +103,13 @@ func createApplicationSupportDirectoryIfNotExists() -> URL? {
 
     // Check if the app folder exists, if not create it
     if fileManager.fileExists(atPath: appFolder.path) {
-        logger.info("'\(appName)' folder already exists")
+        logger.debug("'\(appName)' folder already exists")
         return appFolder
     }
     else {
         do {
             try fileManager.createDirectory(at: appFolder, withIntermediateDirectories: true, attributes: nil)
-            logger.info("Created '\(appName)' folder")
+            logger.debug("Created '\(appName)' folder")
             return appFolder
         }
         catch {

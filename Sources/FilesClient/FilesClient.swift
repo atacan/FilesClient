@@ -2,7 +2,12 @@ import Dependencies
 import Foundation
 import OSLog
 import XCTestDynamicOverlay
+#if canImport(Cocoa)
 import Cocoa
+#endif
+#if canImport(UIKit)
+import UIKit
+#endif
 
 private let logger = Logger(subsystem: "FilesClient", category: "file_operations")
 
@@ -32,7 +37,13 @@ extension FilesClient: DependencyKey {
         return Self(
             read: { try String(contentsOf: $0) },
             openWithDefaultApp: { url in
-                NSWorkspace.shared.open(url)
+                #if canImport(Cocoa)
+                return NSWorkspace.shared.open(url)
+                #elseif canImport(UIKit)
+                return await UIApplication.shared.open(url)
+                #else
+                return false
+                #endif
             },
             temporaryDirectory: { URL(fileURLWithPath: NSTemporaryDirectory()) },
             temporaryFileWithExtension: {
